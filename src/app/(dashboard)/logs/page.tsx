@@ -96,7 +96,16 @@ export default function LogsPage() {
                     </span>
                   </td>
                   <td className="px-6 py-3.5 text-on-surface font-inter leading-relaxed max-w-lg truncate" title={log.description}>
-                    {log.description}
+                    <div className="flex items-center gap-2">
+                      <div className="w-6 h-6 rounded-full bg-[#0b0f10] border border-outline-variant flex items-center justify-center font-semibold text-[9px] text-primary shadow-sm overflow-hidden flex-shrink-0">
+                        {log.userProfileImage ? (
+                          <img src={log.userProfileImage} alt="User" className="w-full h-full object-cover" />
+                        ) : (
+                          "U"
+                        )}
+                      </div>
+                      <span className="truncate">{log.description}</span>
+                    </div>
                   </td>
                   <td className="px-6 py-3.5 text-right font-inter">
                     <span className={`inline-flex px-2 py-0.5 rounded text-[9px] font-semibold border ${

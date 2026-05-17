@@ -22,15 +22,11 @@ export default function LoginPage() {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const response = await login({ username: email, password: password });
-      if (response.success) {
-        showToast("Access granted. Welcome back!", "success");
-        router.push("/dashboard");
-      } else {
-        showToast("Invalid credentials.", "error");
-      }
+      await login({ email, password });
+      showToast("Access granted. Welcome back!", "success");
+      router.push("/dashboard");
     } catch (err: any) {
-      showToast(err.response?.data?.error || "Sign in failed.", "error");
+      showToast(err.response?.data?.message || "Invalid credentials.", "error");
     }
   };
 
@@ -42,8 +38,8 @@ export default function LoginPage() {
     }
     setIsSendingRecovery(true);
     try {
-      // Simulate API call delay
-      await new Promise((resolve) => setTimeout(resolve, 800));
+      const { forgotPassword } = await import("@/services/authService").then(m => ({ forgotPassword: m.authService.forgotPassword }));
+      await forgotPassword(recoveryEmail.trim());
       showToast(`Password recovery link sent to ${recoveryEmail.trim()}!`, "success");
       setRecoveryEmail("");
       setIsRecovering(false);

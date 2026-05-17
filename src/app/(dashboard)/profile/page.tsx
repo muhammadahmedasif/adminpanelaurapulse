@@ -1,11 +1,12 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/Button";
 import { useToast } from "@/components/providers";
-import { Edit2, Check, X } from "lucide-react";
+import { authService } from "@/services/authService";
+import { Edit2, Check, X, Camera } from "lucide-react";
 
 export default function ProfilePage() {
   const { adminUser, logout, isLoggingOut, updateProfile, isUpdatingProfile } = useAuth();
@@ -14,6 +15,8 @@ export default function ProfilePage() {
 
   const [isEditing, setIsEditing] = useState(false);
   const [nameInput, setNameInput] = useState("");
+  const [isUploading, setIsUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (adminUser?.name) {
@@ -37,11 +40,42 @@ export default function ProfilePage() {
       return;
     }
     try {
-      await updateProfile(nameInput);
+      await updateProfile({ name: nameInput });
       setIsEditing(false);
       showToast("Name updated successfully", "success");
     } catch {
       showToast("Failed to update name", "error");
+    }
+  };
+
+  const handleAvatarClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      showToast("Please select an image file", "error");
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      showToast("File size must be less than 5MB", "error");
+      return;
+    }
+
+    try {
+      setIsUploading(true);
+      const { imageUrl } = await authService.uploadAvatar(file);
+      await updateProfile({ profileImage: imageUrl });
+      showToast("Profile image updated successfully", "success");
+    } catch (error: any) {
+      console.error(error);
+      showToast("Failed to upload profile picture", "error");
+    } finally {
+      setIsUploading(false);
     }
   };
 
@@ -63,9 +97,40 @@ export default function ProfilePage() {
 
         {/* Identity Section */}
         <div className="flex items-center gap-4">
-          <div className="w-12 h-12 rounded-full bg-[#0b0f10] border border-[#1c2122] flex items-center justify-center text-primary font-semibold">
-            {adminUser?.name?.charAt(0) || "A"}
+          <div 
+            onClick={handleAvatarClick}
+            className="relative w-16 h-16 rounded-full bg-[#0b0f10] border border-[#1c2122] flex items-center justify-center text-primary font-semibold text-lg cursor-pointer overflow-hidden group hover:border-primary/50 transition-all shadow-md select-none flex-shrink-0"
+            title="Click to change profile picture"
+          >
+            {isUploading ? (
+              <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
+                <span className="w-4 h-4 border-2 border-primary/30 border-t-primary rounded-full animate-spin"></span>
+              </div>
+            ) : (
+              <>
+                {adminUser?.profileImage ? (
+                  <img 
+                    src={adminUser.profileImage} 
+                    alt={adminUser.name} 
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                  />
+                ) : (
+                  adminUser?.name?.charAt(0) || "A"
+                )}
+                {/* Hover Overlay */}
+                <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity duration-200">
+                  <Camera className="w-4 h-4 text-white" />
+                </div>
+              </>
+            )}
           </div>
+          <input 
+            type="file" 
+            ref={fileInputRef} 
+            onChange={handleFileChange} 
+            className="hidden" 
+            accept="image/*" 
+          />
 
           <div className="flex-1">
             {isEditing ? (

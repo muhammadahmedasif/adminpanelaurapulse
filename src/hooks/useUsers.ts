@@ -7,36 +7,7 @@ export function useUsers(params: GetUsersParams) {
   const { data, isLoading, error, refetch } = useQuery({
     queryKey: ["users", params],
     queryFn: () => userService.getUsers(params),
-    placeholderData: (prev) => prev
-  });
-
-  const updateStatusMutation = useMutation({
-    mutationFn: ({ id, status }: { id: string; status: "active" | "blocked" }) =>
-      userService.updateUser(id, { status }),
-    onMutate: async ({ id, status }) => {
-      // Optimistic update
-      await queryClient.cancelQueries({ queryKey: ["users", params] });
-      const previousData = queryClient.getQueryData(["users", params]);
-
-      queryClient.setQueryData(["users", params], (old: any) => {
-        if (!old) return old;
-        return {
-          ...old,
-          users: old.users.map((u: any) => (u.id === id ? { ...u, status } : u))
-        };
-      });
-
-      return { previousData };
-    },
-    onError: (err, variables, context) => {
-      if (context?.previousData) {
-        queryClient.setQueryData(["users", params], context.previousData);
-      }
-    },
-    onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: ["users"] });
-      queryClient.invalidateQueries({ queryKey: ["analytics"] });
-    }
+    placeholderData: (prev) => prev,
   });
 
   const deleteMutation = useMutation({
@@ -44,7 +15,15 @@ export function useUsers(params: GetUsersParams) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["users"] });
       queryClient.invalidateQueries({ queryKey: ["analytics"] });
-    }
+    },
+  });
+
+  const statusMutation = useMutation({
+    mutationFn: userService.updateUserStatus,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["users"] });
+      queryClient.invalidateQueries({ queryKey: ["analytics"] });
+    },
   });
 
   return {
@@ -53,10 +32,9 @@ export function useUsers(params: GetUsersParams) {
     isLoading,
     error,
     refetch,
-    blockUser: (id: string) => updateStatusMutation.mutateAsync({ id, status: "blocked" }),
-    unblockUser: (id: string) => updateStatusMutation.mutateAsync({ id, status: "active" }),
     deleteUser: deleteMutation.mutateAsync,
-    isUpdating: updateStatusMutation.isPending,
-    isDeleting: deleteMutation.isPending
+    isDeleting: deleteMutation.isPending,
+    updateUserStatus: statusMutation.mutateAsync,
+    isUpdatingStatus: statusMutation.isPending,
   };
 }

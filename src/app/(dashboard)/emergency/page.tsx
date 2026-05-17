@@ -1,54 +1,10 @@
 "use client";
 
-import React, { useState } from "react";
+import React from "react";
 import { useEmergency } from "@/hooks/useEmergency";
-import { Switch } from "@/components/ui/Switch";
-import { Modal } from "@/components/ui/Modal";
-import { useToast } from "@/components/providers";
 
 export default function EmergencyPage() {
-  const { showToast } = useToast();
-
-  const {
-    events = [],
-    callLogs = [],
-    twilioNumberStatus,
-    isLoading,
-    toggleGlobalEmergency,
-  } = useEmergency();
-
-  const [confirmOpen, setConfirmOpen] = useState(false);
-  const [pendingState, setPendingState] = useState(false);
-  const [loadingAction, setLoadingAction] = useState(false);
-
-  const isEmergencyActive = twilioNumberStatus?.status === "Active & Secure";
-
-  // Open confirmation modal
-  const handleToggle = (checked: boolean) => {
-    setPendingState(checked);
-    setConfirmOpen(true);
-  };
-
-  // Confirm toggle action
-  const handleConfirm = async () => {
-    setLoadingAction(true);
-
-    try {
-      await toggleGlobalEmergency();
-
-      showToast(
-        pendingState
-          ? "Emergency system enabled"
-          : "Emergency system disabled",
-        "success"
-      );
-    } catch {
-      showToast("Failed to update emergency system", "error");
-    } finally {
-      setLoadingAction(false);
-      setConfirmOpen(false);
-    }
-  };
+  const { status, logs, isLoading } = useEmergency();
 
   if (isLoading) {
     return (
@@ -60,16 +16,17 @@ export default function EmergencyPage() {
     );
   }
 
+  const isEmergencyActive = status?.system?.crisisEnabled ?? false;
+
   return (
     <div className="flex flex-col gap-6 text-[#e0e3e4] font-inter">
-
       {/* Header */}
       <div>
         <h1 className="text-xl font-medium tracking-tight text-on-surface">
           Emergency Control Panel
         </h1>
         <p className="text-xs text-on-surface-variant/80 mt-1">
-          Monitor and control system-level emergency response behavior.
+          Monitor system-level emergency response behavior. (Read Only)
         </p>
       </div>
 
@@ -89,15 +46,10 @@ export default function EmergencyPage() {
 
         <div className="flex items-center gap-3">
           <span className="text-xs text-on-surface-variant/80 font-medium">
-            {isEmergencyActive ? "Enabled" : "Disabled"}
+            {isEmergencyActive ? "Active" : "Inactive"}
           </span>
           <span
-            className={`w-2 h-2 rounded-full ${isEmergencyActive ? "bg-primary animate-pulse" : "bg-error"
-              }`}
-          />
-          <Switch
-            checked={isEmergencyActive}
-            onChange={handleToggle}
+            className={`w-2 h-2 rounded-full ${isEmergencyActive ? "bg-primary animate-pulse" : "bg-error"}`}
           />
         </div>
       </div>
@@ -121,6 +73,9 @@ export default function EmergencyPage() {
                   Reason
                 </th>
                 <th className="px-6 py-3 text-xs text-on-surface-variant/70 font-semibold">
+                  Contact
+                </th>
+                <th className="px-6 py-3 text-xs text-on-surface-variant/70 font-semibold">
                   Time
                 </th>
                 <th className="px-6 py-3 text-xs text-on-surface-variant/70 font-semibold text-right">
@@ -130,28 +85,37 @@ export default function EmergencyPage() {
             </thead>
 
             <tbody className="divide-y divide-[#1c2122]">
-              {events.map((event: any) => (
-                <tr key={event.id} className="hover:bg-white/5">
-                  <td className="px-6 py-4 text-sm font-medium">
-                    {event.userName}
+              {logs.map((log) => (
+                <tr key={log._id} className="hover:bg-white/5">
+                  <td className="px-6 py-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-full bg-[#0b0f10] border border-outline-variant flex items-center justify-center font-semibold text-xs text-primary shadow-sm overflow-hidden flex-shrink-0">
+                        {log.userProfileImage ? (
+                          <img src={log.userProfileImage} alt={log.userName} className="w-full h-full object-cover" />
+                        ) : (
+                          (log.userName || "Unknown").charAt(0).toUpperCase()
+                        )}
+                      </div>
+                      <span className="text-xs font-semibold text-on-surface">{log.userName}</span>
+                    </div>
                   </td>
-
                   <td className="px-6 py-4 text-xs text-on-surface-variant/80">
-                    {event.triggerSource === "system" ? "Biometric Trigger" : "Manual Alert"}
+                    {log.escalationReason || log.riskLevel}
                   </td>
-
                   <td className="px-6 py-4 text-xs text-on-surface-variant/60">
-                    {event.timestamp}
+                    {log.contactCalled} ({log.contactPhone})
                   </td>
-
+                  <td className="px-6 py-4 text-xs text-on-surface-variant/60">
+                    {new Date(log.createdAt).toLocaleString()}
+                  </td>
                   <td className="px-6 py-4 text-right">
                     <span
-                      className={`text-[10px] px-2 py-1 rounded font-semibold uppercase tracking-wider ${event.cooldownStatus === "active"
-                        ? "bg-error/10 text-error"
-                        : "bg-primary/10 text-primary"
+                      className={`text-[10px] px-2 py-1 rounded font-semibold uppercase tracking-wider ${log.outcome === "completed"
+                          ? "bg-primary/10 text-primary"
+                          : "bg-error/10 text-error"
                         }`}
                     >
-                      {event.cooldownStatus}
+                      {log.outcome}
                     </span>
                   </td>
                 </tr>
@@ -170,19 +134,10 @@ export default function EmergencyPage() {
         <div className="space-y-3 text-xs">
           <div className="flex justify-between">
             <span className="text-on-surface-variant/70 font-normal">
-              Phone Alerts
+              Twilio Configured
             </span>
-            <span className="text-primary font-semibold">
-              {isEmergencyActive ? "Enabled" : "Disabled"}
-            </span>
-          </div>
-
-          <div className="flex justify-between">
-            <span className="text-on-surface-variant/70 font-normal">
-              SMS Alerts
-            </span>
-            <span className="text-primary font-semibold">
-              {isEmergencyActive ? "Enabled" : "Disabled"}
+            <span className={status?.system?.twilioConfigured ? "text-primary font-semibold" : "text-error font-semibold"}>
+              {status?.system?.twilioConfigured ? "Yes" : "No"}
             </span>
           </div>
 
@@ -191,78 +146,20 @@ export default function EmergencyPage() {
               Emergency Number
             </span>
             <span className="text-on-surface font-mono">
-              {twilioNumberStatus?.number}
+              {status?.system?.twilioPhone || "Not Configured"}
             </span>
           </div>
 
           <div className="flex justify-between">
             <span className="text-on-surface-variant/70 font-normal">
-              System Status
+              Max Escalations / Day
             </span>
             <span className="text-primary font-semibold">
-              {twilioNumberStatus?.status}
+              {status?.system?.maxPerDay}
             </span>
           </div>
         </div>
       </div>
-
-      {/* Call Logs */}
-      <div className="bg-[#111516] border border-[#1c2122] rounded-xl overflow-hidden">
-        <div className="px-6 py-4 border-b border-[#1c2122]">
-          <h2 className="text-sm font-semibold text-on-surface">
-            Communication Logs
-          </h2>
-        </div>
-
-        <table className="w-full text-left">
-          <thead className="bg-[#0b0f10]">
-            <tr>
-              <th className="px-6 py-3 text-xs font-semibold">ID</th>
-              <th className="px-6 py-3 text-xs font-semibold">Time</th>
-              <th className="px-6 py-3 text-xs font-semibold">Routing</th>
-              <th className="px-6 py-3 text-xs font-semibold text-right">Status</th>
-            </tr>
-          </thead>
-
-          <tbody className="divide-y divide-[#1c2122]">
-            {callLogs.map((log: any) => (
-              <tr key={log.id} className="hover:bg-white/5">
-                <td className="px-6 py-4 text-xs font-mono">
-                  {log.id}
-                </td>
-
-                <td className="px-6 py-4 text-xs text-on-surface-variant/70">
-                  {log.timestamp}
-                </td>
-
-                <td className="px-6 py-4 text-xs">
-                  {log.routing}
-                </td>
-
-                <td className="px-6 py-4 text-right text-[10px] text-primary uppercase font-semibold">
-                  {log.status}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-
-      {/* Confirmation Modal */}
-      <Modal
-        isOpen={confirmOpen}
-        onClose={() => setConfirmOpen(false)}
-        onConfirm={handleConfirm}
-        title="Confirm Emergency System Change"
-        description={
-          pendingState
-            ? "Enable emergency system? Alerts will be activated immediately."
-            : "Disable emergency system? All alerts will stop."
-        }
-        confirmText={pendingState ? "Enable" : "Disable"}
-        isConfirming={loadingAction}
-        variant={pendingState ? "primary" : "danger"}
-      />
     </div>
   );
 }

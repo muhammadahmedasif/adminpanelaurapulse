@@ -1,28 +1,51 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useUsers } from "@/hooks/useUsers";
 import { Drawer } from "@/components/ui/Drawer";
 import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
 import { useToast } from "@/components/providers";
+import { useSearchParams } from "next/navigation";
 
 export default function UsersPage() {
-  const [search, setSearch] = useState("");
+  const searchParams = useSearchParams();
+  const querySearch = searchParams.get("search") || "";
+
+  const [search, setSearch] = useState(querySearch);
+  const [debouncedSearch, setDebouncedSearch] = useState(querySearch);
   const [status, setStatus] = useState("all");
   const [page, setPage] = useState(1);
   const { showToast } = useToast();
+
+  // Sync URL search params
+  useEffect(() => {
+    if (querySearch) {
+      setSearch(querySearch);
+      setDebouncedSearch(querySearch);
+    }
+  }, [querySearch]);
+
+  // Debounce search term to prevent rapid refetching during typing
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(search);
+      setPage(1);
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [search]);
 
   // Load backend users via our TanStack React Query hook
   const { 
     users, 
     pagination, 
     isLoading, 
-    blockUser, 
-    unblockUser, 
-    deleteUser 
+    deleteUser,
+    updateUserStatus,
+    isUpdatingStatus
   } = useUsers({
-    search,
+    search: debouncedSearch,
     status,
     page,
     limit: 10
@@ -30,42 +53,10 @@ export default function UsersPage() {
 
   // State management for drawers & modals
   const [selectedUser, setSelectedUser] = useState<any | null>(null);
-  const [userToBlock, setUserToBlock] = useState<any | null>(null);
-  const [userToUnblock, setUserToUnblock] = useState<any | null>(null);
   const [userToDelete, setUserToDelete] = useState<any | null>(null);
   const [isActionPending, setIsActionPending] = useState(false);
 
-  // Handle blocking user
-  const handleBlockConfirm = async () => {
-    if (!userToBlock) return;
-    setIsActionPending(true);
-    try {
-      await blockUser(userToBlock.id);
-      showToast(`User ${userToBlock.name} blocked successfully`, "success");
-      setSelectedUser(null);
-    } catch {
-      showToast("Failed to block user.", "error");
-    } finally {
-      setIsActionPending(false);
-      setUserToBlock(null);
-    }
-  };
 
-  // Handle unblocking user
-  const handleUnblockConfirm = async () => {
-    if (!userToUnblock) return;
-    setIsActionPending(true);
-    try {
-      await unblockUser(userToUnblock.id);
-      showToast(`User ${userToUnblock.name} unblocked successfully`, "success");
-      setSelectedUser(null);
-    } catch {
-      showToast("Failed to unblock user.", "error");
-    } finally {
-      setIsActionPending(false);
-      setUserToUnblock(null);
-    }
-  };
 
   // Handle deleting user
   const handleDeleteConfirm = async () => {
@@ -113,7 +104,7 @@ export default function UsersPage() {
         >
           <option value="all">All Statuses</option>
           <option value="active">Active</option>
-          <option value="blocked">Blocked</option>
+          <option value="suspended">Suspended</option>
         </select>
 
         <div className="flex items-center justify-end text-xs text-on-surface-variant/80 font-normal px-2">
@@ -160,8 +151,12 @@ export default function UsersPage() {
                 >
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-full bg-[#0b0f10] border border-outline-variant flex items-center justify-center font-semibold text-xs text-primary shadow-sm">
-                        {user.avatar}
+                      <div className="w-8 h-8 rounded-full bg-[#0b0f10] border border-outline-variant flex items-center justify-center font-semibold text-xs text-primary shadow-sm overflow-hidden">
+                        {user.profileImage ? (
+                          <img src={user.profileImage} alt={user.name} className="w-full h-full object-cover" />
+                        ) : (
+                          user.name.charAt(0).toUpperCase()
+                        )}
                       </div>
                       <div>
                         <div className="text-xs font-semibold text-on-surface group-hover:text-primary transition-colors">{user.name}</div>
@@ -170,13 +165,15 @@ export default function UsersPage() {
                     </div>
                   </td>
                   <td className="px-6 py-4">
-                    <span className={`inline-flex px-2 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wider ${
-                      user.status === "active" 
-                        ? "bg-primary/10 text-primary" 
-                        : "bg-error/10 text-error"
-                    }`}>
-                      {user.status}
-                    </span>
+                    {user.status === "suspended" ? (
+                      <span className="inline-flex px-2 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wider bg-error/10 text-error border border-error/20">
+                        suspended
+                      </span>
+                    ) : (
+                      <span className="inline-flex px-2 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wider bg-primary/10 text-primary border border-primary/20">
+                        active
+                      </span>
+                    )}
                   </td>
                   <td className="px-6 py-4">
                     {user.emergencyFlag ? (
@@ -187,7 +184,7 @@ export default function UsersPage() {
                       <span className="text-[10px] text-on-surface-variant/80">Stable</span>
                     )}
                   </td>
-                  <td className="px-6 py-4 text-[10px] font-mono text-on-surface-variant/80">{user.lastSession}</td>
+                  <td className="px-6 py-4 text-[10px] font-mono text-on-surface-variant/80">{new Date(user.createdAt).toLocaleDateString()}</td>
                   <td className="px-6 py-4 text-right" onClick={(e) => e.stopPropagation()}>
                     <div className="flex justify-end gap-2">
                       <button 
@@ -197,25 +194,11 @@ export default function UsersPage() {
                       >
                         <span className="material-symbols-outlined text-[16px]">visibility</span>
                       </button>
-                      {user.status === "active" ? (
-                        <button 
-                          onClick={() => setUserToBlock(user)}
-                          className="p-1.5 border border-outline-variant hover:border-error/45 text-on-surface-variant hover:text-error rounded-lg transition-colors"
-                          title="Block User"
-                        >
-                          <span className="material-symbols-outlined text-[16px]">block</span>
-                        </button>
-                      ) : (
-                        <button 
-                          onClick={() => setUserToUnblock(user)}
-                          className="p-1.5 border border-outline-variant hover:border-primary/45 text-on-surface-variant hover:text-primary rounded-lg transition-colors"
-                          title="Unblock User"
-                        >
-                          <span className="material-symbols-outlined text-[16px]">check_circle</span>
-                        </button>
-                      )}
                       <button 
-                        onClick={() => setUserToDelete(user)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setUserToDelete(user);
+                        }}
                         className="p-1.5 border border-outline-variant hover:bg-error/10 hover:border-error/40 text-error rounded-lg transition-colors"
                         title="Delete User"
                       >
@@ -257,8 +240,19 @@ export default function UsersPage() {
       <Drawer
         isOpen={!!selectedUser}
         onClose={() => setSelectedUser(null)}
-        title={selectedUser?.name || "User Details"}
-        subtitle={`User ID: ${selectedUser?.id || "N/A"}`}
+        title={
+          <div className="flex items-center gap-2.5">
+            <div className="w-7 h-7 rounded-full bg-[#0b0f10] border border-outline-variant flex items-center justify-center font-bold text-[10px] text-primary shadow-sm overflow-hidden flex-shrink-0">
+              {selectedUser?.profileImage ? (
+                <img src={selectedUser.profileImage} alt={selectedUser.name} className="w-full h-full object-cover" />
+              ) : (
+                (selectedUser?.name || "Unknown").charAt(0).toUpperCase()
+              )}
+            </div>
+            <span>{selectedUser?.name || "User Details"}</span>
+          </div>
+        }
+        subtitle={`User ID: ${selectedUser?._id || "N/A"}`}
       >
         <div className="space-y-6 font-inter text-xs text-[#e0e3e4]">
           {/* Section: Status */}
@@ -268,10 +262,29 @@ export default function UsersPage() {
               <span className="font-semibold text-on-surface">{selectedUser?.email}</span>
             </div>
             <div className="flex justify-between items-center">
-              <span className="text-on-surface-variant/80">Status</span>
-              <span className={`px-2 py-0.5 rounded text-[10px] font-semibold uppercase ${
-                selectedUser?.status === "active" ? "bg-primary/10 text-primary" : "bg-error/10 text-error"
-              }`}>{selectedUser?.status}</span>
+              <span className="text-on-surface-variant/80 font-medium">Status</span>
+              <select
+                value={selectedUser?.status || "active"}
+                disabled={isUpdatingStatus}
+                onChange={async (e) => {
+                  try {
+                    const newStatus = e.target.value as "active" | "suspended";
+                    await updateUserStatus({ id: selectedUser._id, status: newStatus });
+                    setSelectedUser((prev: any) => prev ? { ...prev, status: newStatus } : null);
+                    showToast("User status updated successfully", "success");
+                  } catch (err: any) {
+                    showToast(err.response?.data?.message || "Failed to update status", "error");
+                  }
+                }}
+                className={`text-[10px] font-semibold uppercase tracking-wider px-2 py-1 rounded border outline-none cursor-pointer bg-[#0b0f10] ${
+                  (selectedUser?.status || "active") === "suspended"
+                    ? "text-error border-error/30 focus:ring-error"
+                    : "text-primary border-primary/30 focus:ring-primary"
+                }`}
+              >
+                <option value="active">Active</option>
+                <option value="suspended">Suspended</option>
+              </select>
             </div>
             <div className="flex justify-between items-center">
               <span className="text-on-surface-variant/80">Emergency Alert</span>
@@ -284,35 +297,18 @@ export default function UsersPage() {
             <h4 className="text-[10px] uppercase font-semibold tracking-wider text-on-surface-variant/80 mb-2">Activity & History</h4>
             <div className="bg-[#0b0f10] p-4 rounded-xl border border-[#1c2122] space-y-2 font-mono text-[11px]">
               <div className="flex justify-between">
-                <span className="text-on-surface-variant/80">Last Login</span>
-                <span className="text-on-surface">{selectedUser?.lastLogin}</span>
+                <span className="text-on-surface-variant/80">Registered</span>
+                <span className="text-on-surface">{selectedUser?.createdAt ? new Date(selectedUser.createdAt).toLocaleDateString() : 'N/A'}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-on-surface-variant/80">Last Session</span>
-                <span className="text-on-surface">{selectedUser?.lastSession}</span>
+                <span className="text-on-surface-variant/80">Sessions Count</span>
+                <span className="text-on-surface">{selectedUser?.sessionCount || 0}</span>
               </div>
             </div>
           </div>
 
           {/* Quick modification buttons */}
           <div className="pt-4 border-t border-[#1c2122] flex gap-2">
-            {selectedUser?.status === "active" ? (
-              <Button 
-                variant="outline" 
-                className="flex-1 text-error border-error/20 hover:bg-error/10" 
-                onClick={() => setUserToBlock(selectedUser)}
-              >
-                Block User
-              </Button>
-            ) : (
-              <Button 
-                variant="outline" 
-                className="flex-1 text-primary border-primary/20 hover:bg-primary/10" 
-                onClick={() => setUserToUnblock(selectedUser)}
-              >
-                Unblock User
-              </Button>
-            )}
             <Button 
               variant="danger" 
               className="flex-1"
@@ -324,28 +320,7 @@ export default function UsersPage() {
         </div>
       </Drawer>
 
-      {/* Confirmation Modal: Block User */}
-      <Modal
-        isOpen={!!userToBlock}
-        onClose={() => setUserToBlock(null)}
-        onConfirm={handleBlockConfirm}
-        title="Block User"
-        description={`Are you sure you want to block "${userToBlock?.name}"? They will lose access to the system immediately.`}
-        confirmText="Block User"
-        isConfirming={isActionPending}
-        variant="danger"
-      />
 
-      {/* Confirmation Modal: Unblock User */}
-      <Modal
-        isOpen={!!userToUnblock}
-        onClose={() => setUserToUnblock(null)}
-        onConfirm={handleUnblockConfirm}
-        title="Restore Access"
-        description={`Are you sure you want to restore system access for "${userToUnblock?.name}"?`}
-        confirmText="Restore Access"
-        isConfirming={isActionPending}
-      />
 
       {/* Confirmation Modal: Delete User */}
       <Modal

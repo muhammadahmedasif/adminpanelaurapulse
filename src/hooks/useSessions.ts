@@ -7,33 +7,16 @@ export function useSessions(params: GetSessionsParams) {
   const { data, isLoading, error, refetch } = useQuery({
     queryKey: ["sessions", params],
     queryFn: () => sessionService.getSessions(params),
-    placeholderData: (prev) => prev
+    placeholderData: (prev) => prev,
   });
 
-  const flagMutation = useMutation({
-    mutationFn: sessionService.flagSession,
-    onMutate: async (id) => {
-      await queryClient.cancelQueries({ queryKey: ["sessions", params] });
-      const previousData = queryClient.getQueryData(["sessions", params]);
-
-      queryClient.setQueryData(["sessions", params], (old: any) => {
-        if (!old) return old;
-        return {
-          ...old,
-          sessions: old.sessions.map((s: any) => (s.id === id ? { ...s, flagged: !s.flagged } : s))
-        };
-      });
-
-      return { previousData };
-    },
-    onError: (err, id, context) => {
-      if (context?.previousData) {
-        queryClient.setQueryData(["sessions", params], context.previousData);
-      }
-    },
-    onSettled: () => {
+  const statusMutation = useMutation({
+    mutationFn: ({ sessionId, status }: { sessionId: string; status: "active" | "completed" | "archived" }) =>
+      sessionService.updateSessionStatus(sessionId, status),
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["sessions"] });
-    }
+      queryClient.invalidateQueries({ queryKey: ["analytics"] });
+    },
   });
 
   return {
@@ -42,7 +25,7 @@ export function useSessions(params: GetSessionsParams) {
     isLoading,
     error,
     refetch,
-    flagSession: flagMutation.mutateAsync,
-    isFlagging: flagMutation.isPending
+    updateSessionStatus: statusMutation.mutateAsync,
+    isUpdatingStatus: statusMutation.isPending,
   };
 }
