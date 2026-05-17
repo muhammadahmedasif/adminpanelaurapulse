@@ -2,26 +2,135 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@media (prefers-color-scheme: dark) {
+@layer base {
+  /* LIGHT THEME (Default when .dark is absent) */
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --background: #f8fafc;
+    --foreground: #0f172a;
+
+    --primary: #2e7d5c;
+    --primary-foreground: #ffffff;
+    --primary-container: #d8f3dc;
+
+    --secondary: #475569;
+    --secondary-foreground: #ffffff;
+    --secondary-container: #e2e8f0;
+
+    --surface: #ffffff;
+    --surface-dim: #f1f5f9;
+    --surface-bright: #ffffff;
+    --surface-variant: #e2e8f0;
+    --surface-container: #f8fafc;
+    --surface-container-high: #cbd5e1;
+
+    --on-surface: #0f172a;
+    --on-surface-variant: #475569;
+    --on-primary-container: #1b4332;
+    --on-secondary-container: #1e293b;
+
+    --error: #ba1a1a;
+    --error-foreground: #ffffff;
+    --error-container: #ffdad6;
+
+    --outline: #6f7975;
+    --outline-variant: #cbd5e1;
+    --border: #e2e8f0;
+  }
+
+  /* DARK THEME (Active when .dark is present) */
+  .dark {
+    --background: #101415;
+    --foreground: #e0e3e4;
+
+    --primary: #98cbb4;
+    --primary-foreground: #003828;
+    --primary-container: #265745;
+    
+    --secondary: #c0c8ca;
+    --secondary-foreground: #2a3234;
+    --secondary-container: #434a4c;
+
+    --surface: #111516;
+    --surface-dim: #0b0f10;
+    --surface-bright: #363a3b;
+    --surface-variant: #313536;
+    --surface-container: #0b0f10;
+    --surface-container-high: #1c2122;
+
+    --on-surface: #e0e3e4;
+    --on-surface-variant: #8a938d;
+    --on-primary-container: #98cbb4;
+    --on-secondary-container: #c0c8ca;
+
+    --error: #ffb4ab;
+    --error-foreground: #690005;
+    --error-container: #93000a;
+
+    --outline: #8a938d;
+    --outline-variant: #404944;
+    --border: #1c2122;
+  }
+
+  body {
+    background-color: var(--background);
+    color: var(--foreground);
+    font-family: var(--font-inter), sans-serif;
+    font-weight: 300;
+    letter-spacing: -0.01em;
+    transition: background-color 0.2s ease, color 0.2s ease;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-hanken-grotesk), sans-serif;
+    font-weight: 400;
+    letter-spacing: -0.02em;
   }
 }
 
-body {
-  color: var(--foreground);
-  background: var(--background);
-  font-family: Arial, Helvetica, sans-serif;
+/* DYNAMIC CSS OVERRIDES FOR HARDCODED DARK THEME TAILWIND UTILITIES IN LIGHT MODE */
+html:not(.dark) .bg-\[\#0b0f10\],
+.light .bg-\[\#0b0f10\] {
+  background-color: var(--surface-dim) !important;
 }
 
-@layer utilities {
-  .text-balance {
-    text-wrap: balance;
-  }
+html:not(.dark) .bg-\[\#111516\],
+.light .bg-\[\#111516\] {
+  background-color: var(--surface) !important;
+}
+
+html:not(.dark) .bg-\[\#111516\]\/95,
+.light .bg-\[\#111516\]\/95 {
+  background-color: rgba(255, 255, 255, 0.95) !important;
+}
+
+html:not(.dark) .bg-\[\#0b0f10\]\/80,
+.light .bg-\[\#0b0f10\]\/80 {
+  background-color: rgba(241, 245, 249, 0.8) !important;
+}
+
+html:not(.dark) .bg-\[\#0b0f10\]\/95,
+.light .bg-\[\#0b0f10\]\/95 {
+  background-color: rgba(241, 245, 249, 0.95) !important;
+}
+
+html:not(.dark) .text-\[\#e0e3e4\],
+.light .text-\[\#e0e3e4\] {
+  color: var(--foreground) !important;
+}
+
+html:not(.dark) .border-\[\#1c2122\],
+.light .border-\[\#1c2122\] {
+  border-color: var(--border) !important;
+}
+
+/* Ensure inputs, dialogs, and interactive items align with text and background contrast in light mode */
+html:not(.dark) input,
+html:not(.dark) textarea,
+html:not(.dark) select {
+  color: var(--foreground) !important;
+}
+
+html:not(.dark) .placeholder-\[\#404944\]::placeholder {
+  color: var(--on-surface-variant) !important;
+  opacity: 0.6;
 }
