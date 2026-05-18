@@ -1,21 +1,25 @@
 /**
  * Admin API Client
  * ────────────────
- * Axios instance configured for the real backend.
+ * Axios instance configured for the real backend via Next.js proxy.
+ * Requests go to /backend/api/admin/* which Next.js rewrites to the backend.
+ * This avoids browser CORS entirely — no cross-origin requests from the browser.
  * Uses adminAccessToken (separate from user accessToken).
- * Includes JWT interceptor and error handling.
  */
 
 import axios from "axios";
 
-const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:3001";
+// Use the Next.js rewrite proxy path (same-origin, no CORS issues)
+// next.config.mjs rewrites /backend/:path* → BACKEND_URL/:path*
+const BASE_PATH = "/backend/api/admin";
 
 export const apiClient = axios.create({
-  baseURL: `${BACKEND_URL}/api/admin`,
+  baseURL: BASE_PATH,
   headers: {
     "Content-Type": "application/json",
   },
   timeout: 15000,
+  withCredentials: true,
 });
 
 // ── Request interceptor: attach admin JWT ─────────────────────────────────────
