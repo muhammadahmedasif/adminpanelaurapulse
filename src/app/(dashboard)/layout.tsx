@@ -3,8 +3,9 @@
 import Sidebar from "@/components/layout/Sidebar";
 import Topbar from "@/components/layout/Topbar";
 import { useAuth } from "@/hooks/useAuth";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
+import { useEffect } from "react";
 
 const routePermissions: { [key: string]: string } = {
   "/users": "users.read",
@@ -21,7 +22,16 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
+  const router = useRouter();
   const { adminUser, isCheckingAuth, isAuthenticated } = useAuth();
+
+  useEffect(() => {
+    const handleAuthError = () => {
+      router.push("/login");
+    };
+    window.addEventListener("admin-auth-error", handleAuthError);
+    return () => window.removeEventListener("admin-auth-error", handleAuthError);
+  }, [router]);
 
   // Determine if this route is allowed
   let isAllowed = true;

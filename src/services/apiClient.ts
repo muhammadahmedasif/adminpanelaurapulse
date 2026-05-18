@@ -1,25 +1,22 @@
 /**
  * Admin API Client
  * ────────────────
- * Axios instance configured for the real backend via Next.js proxy.
- * Requests go to /backend/api/admin/* which Next.js rewrites to the backend.
- * This avoids browser CORS entirely — no cross-origin requests from the browser.
+ * Axios instance configured for the real backend.
  * Uses adminAccessToken (separate from user accessToken).
+ * Includes JWT interceptor and error handling.
  */
 
 import axios from "axios";
 
-// Use the Next.js rewrite proxy path (same-origin, no CORS issues)
-// next.config.mjs rewrites /backend/:path* → BACKEND_URL/:path*
-const BASE_PATH = "/backend/api/admin";
+const BACKEND_URL_RAW = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:3001";
+const BACKEND_URL = BACKEND_URL_RAW.endsWith('/') ? BACKEND_URL_RAW.slice(0, -1) : BACKEND_URL_RAW;
 
 export const apiClient = axios.create({
-  baseURL: BASE_PATH,
+  baseURL: `${BACKEND_URL}/api/admin`,
   headers: {
     "Content-Type": "application/json",
   },
   timeout: 15000,
-  withCredentials: true,
 });
 
 // ── Request interceptor: attach admin JWT ─────────────────────────────────────
@@ -36,16 +33,15 @@ apiClient.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-// ── Response interceptor: handle 401 → redirect to login ──────────────────────
+// ── Response interceptor: handle 401 safely ───────────────────────────────────
 apiClient.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401 && typeof window !== "undefined") {
-      // Don't redirect if already on login page
-      if (!window.location.pathname.includes("/login")) {
-        localStorage.removeItem("adminAccessToken");
-        window.location.href = "/login";
-      }
+      // Clean up token
+      localStorage.removeItem("adminAccessToken");
+      // Dispatch event instead of hard redirect to prevent ERR_INVALID_REDIRECT
+      window.dispatchEvent(new CustomEvent('admin-auth-error'));
     }
     return Promise.reject(error);
   }
