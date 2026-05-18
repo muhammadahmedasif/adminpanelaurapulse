@@ -4,6 +4,8 @@ import React from "react";
 import Link from "next/link";
 import { useAnalytics } from "@/hooks/useAnalytics";
 import { useLogs } from "@/hooks/useLogs";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 
 export default function AnalyticsPage() {
   const { metrics, isLoading: isAnalyticsLoading } = useAnalytics();
@@ -11,52 +13,90 @@ export default function AnalyticsPage() {
 
   const isLoading = isAnalyticsLoading || isLogsLoading;
 
-  const exportToCSV = () => {
-    const csvRows = [];
+  const exportToPDF = () => {
+    const doc = new jsPDF();
+    
+    // --- Header ---
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(22);
+    doc.setTextColor(11, 15, 16); // #0b0f10
+    doc.text("AuraPulse", 14, 20);
+    
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(14);
+    doc.setTextColor(100, 100, 100);
+    doc.text("Operational Analytics Report", 14, 28);
+    
+    doc.setFontSize(10);
+    doc.text(`Generated At: ${new Date().toLocaleString()}`, 14, 34);
 
-    // Report Title
-    csvRows.push(["AuraPulse Operational Analytics Report"]);
-    csvRows.push([`Generated At: ${new Date().toLocaleString()}`]);
-    csvRows.push([]);
+    // --- Metrics Overview ---
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(12);
+    doc.setTextColor(0, 0, 0);
+    doc.text("METRICS OVERVIEW", 14, 46);
 
-    // Metrics Section
-    csvRows.push(["METRICS OVERVIEW"]);
-    csvRows.push(["Metric", "Value", "Description"]);
-    csvRows.push(["Total Registered Users", metrics.totalUsers, "Registered AuraPulse users"]);
-    csvRows.push(["Active Sessions", metrics.activeSessions, "Users active/active therapy sessions"]);
-    csvRows.push(["Total Therapy Sessions", metrics.totalSessions, "Total AI therapy conversations"]);
-    csvRows.push(["Emergency Events", metrics.totalEscalations, "Triggered emergency alerts"]);
-    csvRows.push(["Weekly Emergencies", metrics.escalationsThisWeek, "Triggered emergency alerts this week"]);
-    csvRows.push(["Average Mood Score", `${metrics.avgMoodScore}/100`, "Average user mood score this week"]);
-    csvRows.push([]);
-
-    // Logs Section
-    csvRows.push(["RECENT SYSTEM ACTIVITIES"]);
-    csvRows.push(["Timestamp", "Category", "Severity", "Description", "Operator/Called"]);
-    logs.forEach((log: any) => {
-      csvRows.push([
-        new Date(log.timestamp).toLocaleString(),
-        log.category,
-        log.severity,
-        log.description,
-        log.operator || "System"
-      ]);
+    autoTable(doc, {
+      startY: 50,
+      headStyles: { fillColor: [152, 203, 180], textColor: [11, 15, 16], fontStyle: 'bold' }, // #98cbb4
+      bodyStyles: { textColor: [50, 50, 50] },
+      alternateRowStyles: { fillColor: [245, 245, 245] },
+      head: [["Metric", "Value", "Description"]],
+      body: [
+        ["Total Registered Users", metrics.totalUsers, "Registered AuraPulse users"],
+        ["Active Sessions", metrics.activeSessions, "Users active/active therapy sessions"],
+        ["Total Therapy Sessions", metrics.totalSessions, "Total AI therapy conversations"],
+        ["Emergency Events", metrics.totalEscalations, "Triggered emergency alerts"],
+        ["Weekly Emergencies", metrics.escalationsThisWeek, "Triggered emergency alerts this week"],
+        ["Average Mood Score", `${metrics.avgMoodScore}/100`, "Average user mood score this week"]
+      ],
     });
 
-    // Convert arrays of rows into CSV string
-    const csvContent = csvRows
-      .map((row) => row.map((val) => `"${String(val).replace(/"/g, '""')}"`).join(","))
-      .join("\n");
+    // --- Recent System Activities ---
+    let finalY = (doc as any).lastAutoTable.finalY || 50;
+    
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(12);
+    doc.setTextColor(0, 0, 0);
+    doc.text("RECENT SYSTEM ACTIVITIES", 14, finalY + 12);
 
-    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.setAttribute("href", url);
-    link.setAttribute("download", `AuraPulse_Analytics_Report_${new Date().toISOString().split('T')[0]}.csv`);
-    link.style.visibility = "hidden";
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    const logData = logs.map((log: any) => [
+      new Date(log.timestamp).toLocaleString(),
+      log.category,
+      log.severity,
+      log.description,
+      log.operator || "System"
+    ]);
+
+    autoTable(doc, {
+      startY: finalY + 16,
+      headStyles: { fillColor: [152, 203, 180], textColor: [11, 15, 16], fontStyle: 'bold' },
+      bodyStyles: { textColor: [50, 50, 50] },
+      alternateRowStyles: { fillColor: [245, 245, 245] },
+      columnStyles: {
+        0: { cellWidth: 35 },
+        1: { cellWidth: 25 },
+        2: { cellWidth: 25 },
+        3: { cellWidth: 'auto' },
+        4: { cellWidth: 25 },
+      },
+      head: [["Timestamp", "Category", "Severity", "Description", "Operator"]],
+      body: logData,
+      didParseCell: function(data) {
+        if (data.section === 'body' && data.column.index === 2) {
+          if (data.cell.raw === 'CRITICAL') {
+            data.cell.styles.textColor = [220, 38, 38]; // error red
+            data.cell.styles.fontStyle = 'bold';
+          } else if (data.cell.raw === 'WARNING') {
+            data.cell.styles.textColor = [217, 119, 6]; // warning orange
+          } else if (data.cell.raw === 'INFO') {
+            data.cell.styles.textColor = [152, 203, 180]; // primary green
+          }
+        }
+      }
+    });
+
+    doc.save(`AuraPulse_Analytics_Report_${new Date().toISOString().split('T')[0]}.pdf`);
   };
 
   if (isLoading) {
@@ -114,13 +154,13 @@ export default function AnalyticsPage() {
         </div>
 
         <button
-          onClick={exportToCSV}
+          onClick={exportToPDF}
           className="flex items-center gap-2 px-4 py-2 border border-outline-variant rounded-lg text-xs font-semibold text-on-surface hover:bg-[#1c2122] transition-colors"
         >
           <span className="material-symbols-outlined text-[16px]">
-            file_download
+            picture_as_pdf
           </span>
-          Export Report
+          Download PDF Report
         </button>
       </div>
 

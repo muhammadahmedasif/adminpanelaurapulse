@@ -355,13 +355,6 @@ export default function DashboardPage() {
                             </span>
                           )}
                         </div>
-                        {log.userProfileImage && (
-                          <div className={`absolute -bottom-1 -right-1 w-4.5 h-4.5 rounded-full flex items-center justify-center border border-[#111516] ${bgClass}`}>
-                            <span className={`material-symbols-outlined ${iconClass} text-[9px]`}>
-                              {iconName}
-                            </span>
-                          </div>
-                        )}
                       </div>
                       <div>
                         <p className="text-xs font-semibold text-on-surface">{titleText}</p>
