@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { useSessions } from "@/hooks/useSessions";
 import { sessionService } from "@/services/sessionService";
+import { useAuth } from "@/hooks/useAuth";
 import { Drawer } from "@/components/ui/Drawer";
 import { Button } from "@/components/ui/Button";
 import { useToast } from "@/components/providers";
@@ -17,6 +18,7 @@ export default function SessionsPage() {
   const [status, setStatus] = useState("all");
   const [page, setPage] = useState(1);
   const { showToast } = useToast();
+  const { adminUser } = useAuth();
 
   // Sync URL search params
   useEffect(() => {
@@ -254,25 +256,37 @@ export default function SessionsPage() {
           {/* Session Status Manager */}
           <div className="bg-[#0b0f10] p-4 rounded-xl border border-[#1c2122] flex justify-between items-center">
             <span className="text-on-surface-variant/80 text-[10px] uppercase font-semibold tracking-wider">Session Status</span>
-            <select
-              value={inspectSession?.status || "active"}
-              onChange={async (e) => {
-                const newStatus = e.target.value as "active" | "completed" | "archived";
-                try {
-                  await sessionService.updateSessionStatus(inspectSession.sessionId, newStatus);
-                  showToast(`Session status updated to ${newStatus}`, "success");
-                  setInspectSession((prev: any) => prev ? { ...prev, status: newStatus } : null);
-                  refetch();
-                } catch (err) {
-                  showToast("Failed to update session status.", "error");
-                }
-              }}
-              className="bg-[#111516] border border-[#1c2122] rounded px-3 py-1.5 text-xs text-on-surface focus:ring-1 focus:ring-primary outline-none"
-            >
-              <option value="active">Active</option>
-              <option value="completed">Completed</option>
-              <option value="archived">Archived</option>
-            </select>
+            {adminUser?.role === "superAdmin" ? (
+              <select
+                value={inspectSession?.status || "active"}
+                onChange={async (e) => {
+                  const newStatus = e.target.value as "active" | "completed" | "archived";
+                  try {
+                    await sessionService.updateSessionStatus(inspectSession.sessionId, newStatus);
+                    showToast(`Session status updated to ${newStatus}`, "success");
+                    setInspectSession((prev: any) => prev ? { ...prev, status: newStatus } : null);
+                    refetch();
+                  } catch (err) {
+                    showToast("Failed to update session status.", "error");
+                  }
+                }}
+                className="bg-[#111516] border border-[#1c2122] rounded px-3 py-1.5 text-xs text-on-surface focus:ring-1 focus:ring-primary outline-none"
+              >
+                <option value="active">Active</option>
+                <option value="completed">Completed</option>
+                <option value="archived">Archived</option>
+              </select>
+            ) : (
+              <span className={`inline-flex px-2 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wider ${
+                inspectSession?.status === "active" 
+                  ? "bg-primary/10 text-primary border border-primary/20" 
+                  : inspectSession?.status === "completed"
+                  ? "bg-outline-variant/20 text-on-surface-variant border border-outline-variant/30"
+                  : "bg-[#f59e0b]/10 text-[#f59e0b] border border-[#f59e0b]/20"
+              }`}>
+                {inspectSession?.status || "active"}
+              </span>
+            )}
           </div>
 
           {/* Transcript logs */}

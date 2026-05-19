@@ -63,7 +63,7 @@ export default function EmergencyPage() {
         </div>
 
         <div className="overflow-x-auto">
-          <table className="w-full text-left">
+          <table className="w-full min-w-[800px] text-left">
             <thead className="bg-[#0b0f10]">
               <tr>
                 <th className="px-6 py-3 text-xs text-on-surface-variant/70 font-semibold">

@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { useUsers } from "@/hooks/useUsers";
+import { useAuth } from "@/hooks/useAuth";
 import { Drawer } from "@/components/ui/Drawer";
 import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
@@ -17,6 +18,7 @@ export default function UsersPage() {
   const [status, setStatus] = useState("all");
   const [page, setPage] = useState(1);
   const { showToast } = useToast();
+  const { adminUser } = useAuth();
 
   // Sync URL search params
   useEffect(() => {
@@ -63,7 +65,7 @@ export default function UsersPage() {
     if (!userToDelete) return;
     setIsActionPending(true);
     try {
-      await deleteUser(userToDelete.id);
+      await deleteUser(userToDelete._id);
       showToast(`User account deleted permanently`, "success");
       setSelectedUser(null);
     } catch {
@@ -114,7 +116,8 @@ export default function UsersPage() {
 
       {/* Main Table */}
       <div className="bg-[#111516] border border-[#1c2122] rounded-xl overflow-hidden shadow-sm">
-        <table className="w-full text-left border-collapse">
+        <div className="w-full overflow-x-auto">
+          <table className="w-full min-w-[900px] text-left border-collapse">
           <thead className="bg-[#0b0f10] border-b border-[#1c2122]">
             <tr>
               <th className="px-6 py-4 text-xs font-medium uppercase tracking-wider text-on-surface-variant/80">User</th>
@@ -145,7 +148,7 @@ export default function UsersPage() {
             ) : (
               users.map((user: any) => (
                 <tr 
-                  key={user.id} 
+                  key={user._id} 
                   className="hover:bg-surface-container-high/40 transition-colors cursor-pointer group"
                   onClick={() => setSelectedUser(user)}
                 >
@@ -194,16 +197,18 @@ export default function UsersPage() {
                       >
                         <span className="material-symbols-outlined text-[16px]">visibility</span>
                       </button>
-                      <button 
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setUserToDelete(user);
-                        }}
-                        className="p-1.5 border border-outline-variant hover:bg-error/10 hover:border-error/40 text-error rounded-lg transition-colors"
-                        title="Delete User"
-                      >
-                        <span className="material-symbols-outlined text-[16px]">delete</span>
-                      </button>
+                      {adminUser?.role === "superAdmin" && (
+                        <button 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setUserToDelete(user);
+                          }}
+                          className="p-1.5 border border-outline-variant hover:bg-error/10 hover:border-error/40 text-error rounded-lg transition-colors"
+                          title="Delete User"
+                        >
+                          <span className="material-symbols-outlined text-[16px]">delete</span>
+                        </button>
+                      )}
                     </div>
                   </td>
                 </tr>
@@ -211,6 +216,7 @@ export default function UsersPage() {
             )}
           </tbody>
         </table>
+      </div>
 
         {/* Pagination bar */}
         <div className="px-6 py-4 bg-[#0b0f10]/50 border-t border-[#1c2122] flex items-center justify-between font-inter text-xs">
@@ -308,15 +314,17 @@ export default function UsersPage() {
           </div>
 
           {/* Quick modification buttons */}
-          <div className="pt-4 border-t border-[#1c2122] flex gap-2">
-            <Button 
-              variant="danger" 
-              className="flex-1"
-              onClick={() => setUserToDelete(selectedUser)}
-            >
-              Delete User
-            </Button>
-          </div>
+          {adminUser?.role === "superAdmin" && (
+            <div className="pt-4 border-t border-[#1c2122] flex gap-2">
+              <Button 
+                variant="danger" 
+                className="flex-1"
+                onClick={() => setUserToDelete(selectedUser)}
+              >
+                Delete User
+              </Button>
+            </div>
+          )}
         </div>
       </Drawer>
 

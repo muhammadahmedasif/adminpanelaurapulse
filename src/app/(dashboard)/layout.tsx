@@ -64,7 +64,7 @@ export default function DashboardLayout({
               </p>
               <Link
                 href="/dashboard"
-                className="bg-primary text-on-primary hover:opacity-90 px-5 py-2.5 rounded-lg text-xs font-semibold shadow-sm transition-all"
+                className="bg-primary text-primary-foreground hover:opacity-90 px-5 py-2.5 rounded-lg text-xs font-semibold shadow-sm transition-all"
               >
                 Return to Dashboard
               </Link>

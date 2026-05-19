@@ -77,7 +77,7 @@ export default function SettingsPage() {
             disabled={!hasChanges || isUpdating}
             className={`px-4 py-2 rounded-lg text-xs font-semibold flex items-center gap-2 transition-all shadow-sm ${
               hasChanges 
-                ? "bg-primary text-on-primary hover:opacity-90 cursor-pointer" 
+                ? "bg-primary text-primary-foreground hover:opacity-90 cursor-pointer" 
                 : "bg-[#1c2122] text-[#8e9192] cursor-not-allowed border border-[#2d3132]/30"
             }`}
           >

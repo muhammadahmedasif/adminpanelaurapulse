@@ -99,7 +99,7 @@ export default function DashboardPage() {
             </button>
           </Link>
           <Link href="/emergency">
-            <button className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-primary text-on-primary font-normal hover:opacity-90 transition-opacity shadow-sm text-xs font-inter">
+            <button className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-error text-error-foreground font-medium hover:opacity-90 transition-opacity shadow-sm text-xs font-inter">
               <span className="material-symbols-outlined text-[16px]">clinical_notes</span>
               Review Alerts
             </button>

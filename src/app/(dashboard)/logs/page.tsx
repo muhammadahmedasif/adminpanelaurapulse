@@ -60,7 +60,8 @@ export default function LogsPage() {
 
       {/* Logs Table */}
       <div className="bg-[#111516] border border-[#1c2122] rounded-xl overflow-hidden shadow-sm">
-        <table className="w-full text-left border-collapse">
+        <div className="w-full overflow-x-auto">
+          <table className="w-full min-w-[900px] text-left border-collapse">
           <thead className="bg-[#0b0f10]/80 border-b border-[#1c2122]">
             <tr>
               <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider text-on-surface-variant/80">Timestamp</th>
@@ -123,6 +124,7 @@ export default function LogsPage() {
             )}
           </tbody>
         </table>
+      </div>
 
         {/* Pagination component */}
         {!isLoading && logs.length > 0 && (
