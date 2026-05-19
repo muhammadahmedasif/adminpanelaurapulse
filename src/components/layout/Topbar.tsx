@@ -24,6 +24,28 @@ export default function Topbar() {
   const [showDropdown, setShowDropdown] = useState(false);
   const dropdownRef = useRef<HTMLFormElement>(null);
 
+  // Notification states
+  const [notifications, setNotifications] = useState<any[]>([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [showNotifDropdown, setShowNotifDropdown] = useState(false);
+  const notifDropdownRef = useRef<HTMLDivElement>(null);
+
+  // Helper: dynamic time-ago string
+  const timeAgo = (dateStr: string) => {
+    if (!dateStr) return "";
+    const now = new Date();
+    const past = new Date(dateStr);
+    const diffMs = now.getTime() - past.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMins / 60);
+    const diffDays = Math.floor(diffHours / 24);
+
+    if (diffMins < 1) return "Just now";
+    if (diffMins < 60) return `${diffMins}m ago`;
+    if (diffHours < 24) return `${diffHours}h ago`;
+    return `${diffDays}d ago`;
+  };
+
   // Avoid hydration mismatch by waiting for mounting
   useEffect(() => {
     setMounted(true);
@@ -59,16 +81,90 @@ export default function Topbar() {
     return () => clearTimeout(timer);
   }, [searchQuery]);
 
-  // Click outside to close dropdown
+  // Click outside to close dropdowns
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
         setShowDropdown(false);
       }
+      if (notifDropdownRef.current && !notifDropdownRef.current.contains(event.target as Node)) {
+        setShowNotifDropdown(false);
+      }
     }
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
+
+  // Fetch and poll notification logs
+  useEffect(() => {
+    let active = true;
+
+    const fetchNotifications = async () => {
+      try {
+        const res = await apiClient.get("/logs?limit=8");
+        const logsData = res.data?.logs || [];
+        if (!active) return;
+
+        // Check dismissed logs from localStorage
+        const dismissedRaw = localStorage.getItem("admin_dismissed_notifications");
+        const dismissedIds: string[] = dismissedRaw ? JSON.parse(dismissedRaw) : [];
+
+        // Only display logs that have NOT been dismissed
+        const visibleLogs = logsData.filter((log: any) => !dismissedIds.includes(log._id || log.id));
+
+        setNotifications(visibleLogs);
+        setUnreadCount(visibleLogs.length);
+      } catch (err) {
+        console.error("Failed to fetch notifications:", err);
+      }
+    };
+
+    fetchNotifications();
+    const interval = setInterval(fetchNotifications, 60000);
+
+    return () => {
+      active = false;
+      clearInterval(interval);
+    };
+  }, []);
+
+  const handleDismissNotification = (id: string) => {
+    const dismissedRaw = localStorage.getItem("admin_dismissed_notifications");
+    const dismissedIds: string[] = dismissedRaw ? JSON.parse(dismissedRaw) : [];
+    if (id && !dismissedIds.includes(id)) {
+      dismissedIds.push(id);
+      localStorage.setItem("admin_dismissed_notifications", JSON.stringify(dismissedIds));
+    }
+    setNotifications(prev => prev.filter((log: any) => (log._id || log.id) !== id));
+    setUnreadCount(prev => Math.max(0, prev - 1));
+  };
+
+  const handleMarkAllAsRead = () => {
+    const dismissedRaw = localStorage.getItem("admin_dismissed_notifications");
+    const dismissedIds: string[] = dismissedRaw ? JSON.parse(dismissedRaw) : [];
+    
+    notifications.forEach((log: any) => {
+      const id = log._id || log.id;
+      if (id && !dismissedIds.includes(id)) {
+        dismissedIds.push(id);
+      }
+    });
+    
+    localStorage.setItem("admin_dismissed_notifications", JSON.stringify(dismissedIds));
+    setNotifications([]);
+    setUnreadCount(0);
+  };
+
+  const handleNotificationClick = (log: any) => {
+    const id = log._id || log.id;
+    handleDismissNotification(id);
+    setShowNotifDropdown(false);
+    if (log.category === "CRISIS") {
+      router.push("/emergency");
+    } else {
+      router.push("/logs");
+    }
+  };
 
   const toggleTheme = () => {
     setTheme(theme === "dark" ? "light" : "dark");
@@ -210,12 +306,91 @@ export default function Topbar() {
           </button>
         )}
 
-        <button 
-          className="w-9 h-9 flex items-center justify-center text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high rounded-lg transition-colors cursor-pointer active:scale-95 border border-[#1c2122] dark:border-[#1c2122] light:border-[#e2e8f0]"
-          title="Notifications"
-        >
-          <Bell className="w-4 h-4" />
-        </button>
+        <div className="relative" ref={notifDropdownRef}>
+          <button 
+            onClick={() => {
+              setShowNotifDropdown(!showNotifDropdown);
+            }}
+            className="w-9 h-9 flex items-center justify-center text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high rounded-lg transition-colors cursor-pointer active:scale-95 border border-[#1c2122] dark:border-[#1c2122] light:border-[#e2e8f0] relative"
+            title="Notifications"
+          >
+            <Bell className="w-4 h-4 text-primary" />
+            {unreadCount > 0 && (
+              <span className="absolute top-1 right-1 w-2.5 h-2.5 rounded-full bg-error animate-pulse border border-[#0b0f10]" />
+            )}
+          </button>
+
+          {showNotifDropdown && (
+            <div className="absolute right-0 top-full mt-2 w-80 sm:w-96 bg-[#0b0f10] border border-[#1c2122] rounded-xl shadow-2xl overflow-hidden z-50 py-2">
+              <div className="px-4 py-2 border-b border-[#1c2122] flex justify-between items-center bg-[#0b0f10]/80">
+                <span className="text-xs font-semibold text-on-surface">Notifications</span>
+                {notifications.length > 0 && (
+                  <button 
+                    onClick={handleMarkAllAsRead}
+                    className="text-[10px] text-primary hover:underline font-semibold"
+                  >
+                    Mark all read
+                  </button>
+                )}
+              </div>
+
+              <div className="max-h-[300px] overflow-y-auto divide-y divide-[#1c2122]/50">
+                {notifications.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-8 text-xs text-on-surface-variant/60 font-mono gap-1 text-center">
+                    <span className="material-symbols-outlined text-[28px] text-on-surface-variant/30">notifications_off</span>
+                    <span>No active notifications</span>
+                  </div>
+                ) : (
+                  notifications.map((log: any) => {
+                    let NotifIcon = "notifications";
+                    let iconColor = "text-[#8a938d]";
+                    let bgIconColor = "bg-[#1c2122]";
+
+                    if (log.category === "CRISIS") {
+                      NotifIcon = "emergency_home";
+                      iconColor = "text-error";
+                      bgIconColor = "bg-error/10";
+                    } else if (log.category === "AUTH") {
+                      NotifIcon = "vpn_key";
+                      iconColor = "text-primary";
+                      bgIconColor = "bg-primary/10";
+                    } else if (log.category === "SECURITY") {
+                      NotifIcon = "shield_lock";
+                      iconColor = "text-[#f59e0b]";
+                      bgIconColor = "bg-[#f59e0b]/10";
+                    } else if (log.category === "SYSTEM") {
+                      NotifIcon = "tune";
+                      iconColor = "text-[#3b82f6]";
+                      bgIconColor = "bg-[#3b82f6]/10";
+                    }
+
+                    return (
+                      <div 
+                        key={log._id || log.id}
+                        onClick={() => handleNotificationClick(log)}
+                        className="p-3 hover:bg-[#111516] cursor-pointer transition-colors flex gap-3 items-start"
+                      >
+                        <div className={`w-8 h-8 rounded-lg ${bgIconColor} flex items-center justify-center flex-shrink-0 border border-[#1c2122]`}>
+                          <span className={`material-symbols-outlined text-[16px] ${iconColor}`}>
+                            {NotifIcon}
+                          </span>
+                        </div>
+                        <div className="overflow-hidden flex-1">
+                          <p className="text-xs text-on-surface font-normal leading-normal line-clamp-2">
+                            {log.description}
+                          </p>
+                          <span className="text-[9px] text-on-surface-variant/60 font-mono mt-1 block">
+                            {timeAgo(log.timestamp)}
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+            </div>
+          )}
+        </div>
       </div>
     </header>
   );

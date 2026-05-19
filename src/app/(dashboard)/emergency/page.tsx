@@ -6,6 +6,21 @@ import { useEmergency } from "@/hooks/useEmergency";
 export default function EmergencyPage() {
   const { status, logs, isLoading } = useEmergency();
 
+  const timeAgo = (dateStr: string) => {
+    if (!dateStr) return "";
+    const now = new Date();
+    const past = new Date(dateStr);
+    const diffMs = now.getTime() - past.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMins / 60);
+    const diffDays = Math.floor(diffHours / 24);
+
+    if (diffMins < 1) return "Just now";
+    if (diffMins < 60) return `${diffMins}m ago`;
+    if (diffHours < 24) return `${diffHours}h ago`;
+    return `${diffDays}d ago`;
+  };
+
   if (isLoading) {
     return (
       <div className="space-y-6 animate-pulse">
@@ -105,8 +120,9 @@ export default function EmergencyPage() {
                   <td className="px-6 py-4 text-xs text-on-surface-variant/60">
                     {log.contactCalled} ({log.contactPhone})
                   </td>
-                  <td className="px-6 py-4 text-xs text-on-surface-variant/60">
-                    {new Date(log.createdAt).toLocaleString()}
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="text-xs text-on-surface-variant/95">{new Date(log.createdAt).toLocaleString()}</div>
+                    <div className="text-[10px] text-[#8a938d] font-sans font-medium mt-0.5">{timeAgo(log.createdAt)}</div>
                   </td>
                   <td className="px-6 py-4 text-right">
                     <span

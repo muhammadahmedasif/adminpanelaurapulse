@@ -16,6 +16,21 @@ export default function LogsPage() {
     limit: 15
   });
 
+  const timeAgo = (dateStr: string) => {
+    if (!dateStr) return "";
+    const now = new Date();
+    const past = new Date(dateStr);
+    const diffMs = now.getTime() - past.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMins / 60);
+    const diffDays = Math.floor(diffHours / 24);
+
+    if (diffMins < 1) return "Just now";
+    if (diffMins < 60) return `${diffMins}m ago`;
+    if (diffHours < 24) return `${diffHours}h ago`;
+    return `${diffDays}d ago`;
+  };
+
   return (
     <div className="flex-1 flex flex-col gap-6 w-full font-inter text-[#e0e3e4]">
       {/* Header */}
@@ -90,7 +105,10 @@ export default function LogsPage() {
             ) : (
               logs.map((log: any) => (
                 <tr key={log.id} className="hover:bg-surface-container-high/20 transition-colors">
-                  <td className="px-6 py-3.5 text-on-surface-variant/80 whitespace-nowrap">{log.timestamp}</td>
+                  <td className="px-6 py-3.5 whitespace-nowrap">
+                    <div className="text-on-surface-variant/90 font-mono">{log.timestamp}</div>
+                    <div className="text-[10px] text-[#8a938d] font-sans font-medium mt-0.5">{timeAgo(log.timestamp)}</div>
+                  </td>
                   <td className="px-6 py-3.5">
                     <span className="bg-[#0b0f10] px-2 py-0.5 rounded border border-[#1c2122] text-[9px] font-semibold font-inter text-on-surface">
                       {log.category === "AUTH" ? "Auth" : log.category === "CRISIS" ? "Crisis" : log.category}
