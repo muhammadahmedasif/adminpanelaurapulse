@@ -33,6 +33,13 @@ export function useAuth() {
     },
   });
 
+  const deleteAvatarMutation = useMutation({
+    mutationFn: authService.deleteAvatar,
+    onSuccess: (data) => {
+      queryClient.setQueryData(["adminMe"], { authenticated: true, admin: data.admin });
+    },
+  });
+
   return {
     isAuthenticated: !!authData?.authenticated,
     adminUser: (authData as any)?.admin as AdminProfile | null,
@@ -44,5 +51,7 @@ export function useAuth() {
     isLoggingOut: logoutMutation.isPending,
     updateProfile: updateProfileMutation.mutateAsync,
     isUpdatingProfile: updateProfileMutation.isPending,
+    deleteAvatar: deleteAvatarMutation.mutateAsync,
+    isDeletingAvatar: deleteAvatarMutation.isPending,
   };
 }

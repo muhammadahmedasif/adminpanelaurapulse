@@ -6,10 +6,10 @@ import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/Button";
 import { useToast } from "@/components/providers";
 import { authService } from "@/services/authService";
-import { Edit2, Check, X, Camera } from "lucide-react";
+import { Edit2, Check, X, Camera, Trash2, User as UserIcon } from "lucide-react";
 
 export default function ProfilePage() {
-  const { adminUser, logout, isLoggingOut, updateProfile, isUpdatingProfile } = useAuth();
+  const { adminUser, logout, isLoggingOut, updateProfile, isUpdatingProfile, deleteAvatar, isDeletingAvatar } = useAuth();
   const { showToast } = useToast();
   const router = useRouter();
 
@@ -49,6 +49,7 @@ export default function ProfilePage() {
   };
 
   const handleAvatarClick = () => {
+    if (isUploading || isDeletingAvatar) return;
     fileInputRef.current?.click();
   };
 
@@ -76,8 +77,24 @@ export default function ProfilePage() {
       showToast("Failed to upload profile picture", "error");
     } finally {
       setIsUploading(false);
+      e.target.value = "";
     }
   };
+
+  const handleDeleteAvatar = async (e: React.MouseEvent<HTMLButtonElement>) => {
+    e.stopPropagation();
+    if (!adminUser?.profileImage) return;
+
+    try {
+      await deleteAvatar();
+      showToast("Profile image removed", "success");
+    } catch (error: any) {
+      console.error(error);
+      showToast("Failed to delete profile picture", "error");
+    }
+  };
+
+  const isAvatarBusy = isUploading || isDeletingAvatar;
 
   return (
     <div className="max-w-2xl mx-auto text-[#e0e3e4] font-inter space-y-8">
@@ -97,32 +114,47 @@ export default function ProfilePage() {
 
         {/* Identity Section */}
         <div className="flex items-center gap-4">
-          <div 
-            onClick={handleAvatarClick}
-            className="relative w-16 h-16 rounded-full bg-[#0b0f10] border border-[#1c2122] flex items-center justify-center text-primary font-semibold text-lg cursor-pointer overflow-hidden group hover:border-primary/50 transition-all shadow-md select-none flex-shrink-0"
-            title="Click to change profile picture"
-          >
-            {isUploading ? (
-              <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
-                <span className="w-4 h-4 border-2 border-primary/30 border-t-primary rounded-full animate-spin"></span>
-              </div>
-            ) : (
-              <>
-                {adminUser?.profileImage ? (
-                  <img 
-                    src={adminUser.profileImage} 
-                    alt={adminUser.name} 
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                  />
-                ) : (
-                  adminUser?.name?.charAt(0) || "A"
-                )}
-                {/* Hover Overlay */}
+          <div className="relative flex-shrink-0">
+            <div 
+              onClick={handleAvatarClick}
+              className="relative w-16 h-16 rounded-full bg-[#0b0f10] border border-[#1c2122] flex items-center justify-center text-primary font-semibold text-lg cursor-pointer overflow-hidden group hover:border-primary/50 transition-all shadow-md select-none"
+              title="Click to change profile picture"
+            >
+              {adminUser?.profileImage ? (
+                <img 
+                  src={adminUser.profileImage} 
+                  alt={adminUser.name} 
+                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                />
+              ) : (
+                <UserIcon className="w-7 h-7 text-on-surface-variant/70" />
+              )}
+              {isAvatarBusy ? (
+                <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
+                  <span className="w-4 h-4 border-2 border-primary/30 border-t-primary rounded-full animate-spin"></span>
+                </div>
+              ) : (
                 <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity duration-200">
                   <Camera className="w-4 h-4 text-white" />
                 </div>
-              </>
-            )}
+              )}
+            </div>
+            {adminUser?.profileImage ? (
+              <button
+                type="button"
+                onClick={handleDeleteAvatar}
+                disabled={isAvatarBusy || isUpdatingProfile}
+                className="absolute -bottom-1 -left-1 w-7 h-7 rounded-full bg-error text-on-error border border-[#111516] flex items-center justify-center hover:bg-error/90 transition-colors disabled:opacity-60 disabled:pointer-events-none"
+                title="Delete profile picture"
+                aria-label="Delete profile picture"
+              >
+                {isDeletingAvatar ? (
+                  <span className="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin"></span>
+                ) : (
+                  <Trash2 className="w-3.5 h-3.5" />
+                )}
+              </button>
+            ) : null}
           </div>
           <input 
             type="file" 
@@ -130,6 +162,7 @@ export default function ProfilePage() {
             onChange={handleFileChange} 
             className="hidden" 
             accept="image/*" 
+            disabled={isAvatarBusy}
           />
 
           <div className="flex-1">

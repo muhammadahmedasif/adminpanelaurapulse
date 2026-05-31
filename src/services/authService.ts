@@ -49,6 +49,11 @@ export const authService = {
     return data;
   },
 
+  async deleteAvatar(): Promise<{ admin: AdminMeResponse["admin"] }> {
+    const { data } = await apiClient.delete("/auth/delete-avatar");
+    return data;
+  },
+
   async forgotPassword(email: string): Promise<{ message: string }> {
     const { data } = await apiClient.post("/auth/forgot-password", { email });
     return data;
