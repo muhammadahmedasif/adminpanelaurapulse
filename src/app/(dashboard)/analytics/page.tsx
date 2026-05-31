@@ -155,7 +155,7 @@ export default function AnalyticsPage() {
 
         <button
           onClick={exportToPDF}
-          className="flex items-center gap-2 px-4 py-2 border border-outline-variant rounded-lg text-xs font-semibold text-on-surface hover:bg-[#1c2122] transition-colors"
+          className="flex items-center gap-2 px-4 py-2 border border-outline-variant rounded-lg text-xs font-semibold text-on-surface hover:bg-[#434A4C] transition-colors hover:text-white"
         >
           <span className="material-symbols-outlined text-[16px]">
             picture_as_pdf
