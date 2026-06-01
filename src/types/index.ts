@@ -159,12 +159,34 @@ export interface AnalyticsMetrics {
   totalActivities: number;
   totalMoodEntries: number;
   avgMoodScore: number;
+  weeklyActiveUsers: number;
+  weeklySessions: number;
+  weeklyCompletedSessions: number;
+  weeklyActivities: number;
+  weeklyCompletedActivities: number;
+  weeklyActivityCompletionRate: number;
+  weeklyHighRiskSessions: number;
+  weeklyMessageCount: number;
+  avgMessagesPerSession: number;
+  previousWeekAvgMoodScore: number;
+  outcomeTrackedUsers: number;
+  benefitedUsersThisWeek: number;
+  notRecoveredUsersThisWeek: number;
+  needsFollowUpUsers: number;
+  averageMoodChange: number;
+  recoveryRate: number;
 }
 
 export interface AnalyticsTrends {
   usersGrowth: { _id: string; count: number }[];
   sessionsPerDay: { _id: string; count: number }[];
   emergencyTrends: { _id: string; count: number }[];
+  activityBreakdown: {
+    _id: string;
+    count: number;
+    completedCount: number;
+    totalMinutes: number;
+  }[];
 }
 
 export interface AnalyticsResponse {

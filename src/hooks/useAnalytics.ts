@@ -20,12 +20,29 @@ export function useAnalytics() {
     totalActivities: 0,
     totalMoodEntries: 0,
     avgMoodScore: 0,
+    weeklyActiveUsers: 0,
+    weeklySessions: 0,
+    weeklyCompletedSessions: 0,
+    weeklyActivities: 0,
+    weeklyCompletedActivities: 0,
+    weeklyActivityCompletionRate: 0,
+    weeklyHighRiskSessions: 0,
+    weeklyMessageCount: 0,
+    avgMessagesPerSession: 0,
+    previousWeekAvgMoodScore: 0,
+    outcomeTrackedUsers: 0,
+    benefitedUsersThisWeek: 0,
+    notRecoveredUsersThisWeek: 0,
+    needsFollowUpUsers: 0,
+    averageMoodChange: 0,
+    recoveryRate: 0,
   };
 
   const defaultTrends: AnalyticsTrends = {
     usersGrowth: [],
     sessionsPerDay: [],
     emergencyTrends: [],
+    activityBreakdown: [],
   };
 
   return {
