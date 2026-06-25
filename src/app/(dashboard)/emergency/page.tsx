@@ -117,8 +117,10 @@ export default function EmergencyPage() {
                   <td className="px-6 py-4 text-xs text-on-surface-variant/80">
                     {log.escalationReason || log.riskLevel}
                   </td>
-                  <td className="px-6 py-4 text-xs text-on-surface-variant/60">
-                    {log.contactCalled} ({log.contactPhone})
+                  <td className="px-6 py-4 text-xs text-on-surface-variant/60 space-y-1">
+                    <div className="font-medium text-on-surface">{log.contactCalled}</div>
+                    {log.contactPhone && <div className="text-[10px] text-on-surface-variant/80">📞 {log.contactPhone}</div>}
+                    {log.contactWhatsApp && <div className="text-[10px] text-green-500">💬 {log.contactWhatsApp}</div>}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-xs text-on-surface-variant/95">{new Date(log.createdAt).toLocaleString()}</div>
@@ -159,10 +161,19 @@ export default function EmergencyPage() {
 
           <div className="flex justify-between">
             <span className="text-on-surface-variant/70 font-normal">
-              Emergency Number
+              Emergency Number (Voice)
             </span>
             <span className="text-on-surface font-mono">
               {status?.system?.twilioPhone || "Not Configured"}
+            </span>
+          </div>
+
+          <div className="flex justify-between">
+            <span className="text-on-surface-variant/70 font-normal">
+              WhatsApp Number
+            </span>
+            <span className="text-on-surface font-mono">
+              {status?.system?.twilioWhatsApp || "Not Configured"}
             </span>
           </div>
 

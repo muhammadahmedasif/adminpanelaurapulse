@@ -113,8 +113,9 @@ export interface EscalationLog {
   riskLevel: RiskLevel;
   crisisRiskScore: number;
   escalationReason: string;
-  contactCalled: string;
-  contactPhone: string;
+  contactCalled?: string;
+  contactPhone?: string;
+  contactWhatsApp?: string;
   callSid?: string;
   outcome: EscalationOutcome;
   error?: string;
@@ -126,6 +127,7 @@ export interface EmergencyStatus {
     crisisEnabled: boolean;
     twilioConfigured: boolean;
     twilioPhone: string;
+    twilioWhatsApp?: string;
     cooldownHours: number;
     maxPerDay: number;
   };
