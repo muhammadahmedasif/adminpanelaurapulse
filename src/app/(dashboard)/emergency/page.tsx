@@ -93,6 +93,9 @@ export default function EmergencyPage() {
                 <th className="px-6 py-3 text-xs text-on-surface-variant/70 font-semibold">
                   Time
                 </th>
+                <th className="px-6 py-3 text-xs text-on-surface-variant/70 font-semibold">
+                  Details
+                </th>
                 <th className="px-6 py-3 text-xs text-on-surface-variant/70 font-semibold text-right">
                   Status
                 </th>
@@ -126,6 +129,47 @@ export default function EmergencyPage() {
                     <div className="text-xs text-on-surface-variant/95">{new Date(log.createdAt).toLocaleString()}</div>
                     <div className="text-[10px] text-[#8a938d] font-sans font-medium mt-0.5">{timeAgo(log.createdAt)}</div>
                   </td>
+                  <td className="px-6 py-4 space-y-1">
+                    {/* Risk Score */}
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-[10px] text-on-surface-variant/60 uppercase tracking-wide">Risk Score:</span>
+                      <span className={`text-xs font-semibold ${
+                        log.crisisRiskScore >= 0.9 ? "text-error" :
+                        log.crisisRiskScore >= 0.75 ? "text-warning" :
+                        "text-on-surface-variant"
+                      }`}>
+                        {log.crisisRiskScore != null
+                          ? `${Math.round(log.crisisRiskScore * 100)}%`
+                          : "—"}
+                      </span>
+                    </div>
+                    {/* Call Duration (only if completed) */}
+                    {log.duration != null && (
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-[10px] text-on-surface-variant/60 uppercase tracking-wide">Duration:</span>
+                        <span className="text-xs text-on-surface-variant">{log.duration}s</span>
+                      </div>
+                    )}
+                    {/* Call SID */}
+                    {log.callSid && (
+                      <div className="text-[10px] text-on-surface-variant/50 font-mono truncate max-w-[160px]" title={log.callSid}>
+                        SID: {log.callSid}
+                      </div>
+                    )}
+                    {/* Twilio Error */}
+                    {(log.error || log.twilioErrorCode) && (
+                      <div className="text-[10px] text-error leading-snug max-w-[220px]">
+                        {log.error}
+                        {log.twilioErrorCode && (
+                          <span className="ml-1 opacity-70">({log.twilioErrorCode})</span>
+                        )}
+                      </div>
+                    )}
+                    {/* No info at all */}
+                    {!log.duration && !log.callSid && !log.error && !log.twilioErrorCode && log.crisisRiskScore == null && (
+                      <span className="text-[10px] text-on-surface-variant/40">—</span>
+                    )}
+                  </td>
                   <td className="px-6 py-4 text-right">
                     <span
                       className={`text-[10px] px-2 py-1 rounded font-semibold uppercase tracking-wider ${log.outcome === "completed"
@@ -133,7 +177,7 @@ export default function EmergencyPage() {
                           : "bg-error/10 text-error"
                         }`}
                     >
-                      {log.outcome}
+                      {log.callStatus || log.outcome}
                     </span>
                   </td>
                 </tr>

@@ -119,6 +119,9 @@ export interface EscalationLog {
   callSid?: string;
   outcome: EscalationOutcome;
   error?: string;
+  duration?: number;
+  callStatus?: string;
+  twilioErrorCode?: string;
   createdAt: string;
 }
 
